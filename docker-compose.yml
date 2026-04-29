@@ -17,7 +17,7 @@ services:
       - "traefik.http.routers.aboutme.rule=Host(`aboutme.dimonrond.ru`)"
       - "traefik.http.routers.aboutme.entrypoints=websecure"
       - "traefik.http.routers.aboutme.tls=true"
-      - "traefik.http.routers.aboutme.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.aboutme.tls.certresolver=mytlschallenge"
       - "traefik.http.services.aboutme.loadbalancer.server.port=5000"
 
 networks:
