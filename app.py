@@ -1,7 +1,9 @@
 import logging
+import os
 from datetime import datetime
+from logging.handlers import RotatingFileHandler
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, g, redirect, render_template, request, url_for
 from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
@@ -71,32 +73,102 @@ CASES = [
     {
         "id": 1,
         "title": "Разработка Telegram-бота для бизнеса",
-        "short_description": "Автоматизация заявок и поддержки клиентов через удобный бот.",
-        "full_description": (
-            "Создали Telegram-бота для малого бизнеса: обработка заявок, каталог услуг, "
-            "уведомления менеджерам и базовая аналитика по диалогам."
+        "short_description": (
+            "Nutribot — интеллектуальный Telegram-бот на базе n8n для персональных "
+            "рекомендаций по питанию и тренировкам."
         ),
-        "image": "images/case1.svg",
+        "full_description": (
+            "Nutribot — это интеллектуальный Telegram-бот на базе n8n, который "
+            "автоматизирует персональные рекомендации по питанию и тренировкам, "
+            "помогает удерживать клиентов и снижает операционные расходы фитнес- "
+            "и wellness-бизнеса."
+        ),
+        "business_benefits": [
+            "Снижение затрат на рутину: бот берет на себя первичный опрос, сбор параметров клиента и выдачу базовых персональных рекомендаций.",
+            "Масштабирование без роста штата: один бот может одновременно обслуживать сотни и тысячи пользователей 24/7.",
+            "Быстрый запуск новых услуг: через n8n легко добавлять программы питания, тренировочные планы, челленджи, подписки и рассылки.",
+            "Рост вовлеченности и удержания: клиент получает рекомендации в привычном канале Telegram и чаще возвращается к диалогу.",
+            "Персонализация как конкурентное преимущество: ответы формируются с учетом данных пользователя, а не по шаблону для всех.",
+            "Гибкая интеграция в текущие процессы: бот связывается с Google Sheets, CRM, AI-сервисами и внутренней аналитикой.",
+        ],
+        "economy_effect": [
+            "Меньше ручной нагрузки на специалистов.",
+            "Ниже стоимость обработки одного клиента.",
+            "Выше конверсия из интереса в регулярное взаимодействие.",
+            "Быстрее окупаемость digital-каналов за счет автоматизации и персонализации.",
+        ],
+        "image": "images/Nutribot/Nutribot_1.jpg",
+        "gallery": [
+            "images/Nutribot/Nutribot_1.jpg",
+            "images/Nutribot/Nutribot_2.jpg",
+        ],
     },
     {
         "id": 2,
         "title": "Создание интернет-магазина",
-        "short_description": "E-commerce платформа с каталогом, корзиной и оплатой.",
-        "full_description": (
-            "Разработали интернет-магазин с адаптивным UI, фильтрацией товаров, "
-            "интеграцией онлайн-оплаты и панелью управления заказами."
+        "short_description": (
+            "Шмавито — готовая онлайн-платформа для аренды и продажи вещей "
+            "в стиле Avito/eBay без разработки с нуля."
         ),
-        "image": "images/case2.svg",
+        "full_description": (
+            "Шмавито — это готовая онлайн-платформа для аренды и продажи вещей, "
+            "которая помогает бизнесу быстро запустить собственный маркетплейс "
+            "в стиле Avito/eBay без затрат на разработку с нуля."
+        ),
+        "business_benefits": [
+            "Быстрый запуск сервиса объявлений и сделок на собственной инфраструктуре.",
+            "Новый источник выручки за счет комиссий, платного размещения и дополнительных услуг.",
+            "Рост клиентской базы: продавцы и покупатели собираются в одной экосистеме.",
+            "Прозрачные процессы: каталог, модерация, статусы, история заказов.",
+            "Гибкая модель монетизации под ваш рынок и нишу.",
+        ],
+        "economy_efficiency": [
+            "Экономия бюджета: не нужно инвестировать в долгую custom-разработку.",
+            "Экономия времени: ключевые сценарии уже реализованы — регистрация, размещение объявлений, поиск, оформление заказа.",
+            "Снижение операционных расходов: автоматизация модерации и обработки заявок.",
+            "Быстрее выход на рынок: можно запустить MVP и начать тестировать спрос в короткие сроки.",
+        ],
+        "competitive_advantages": [
+            "Гибкая архитектура: легко адаптировать под B2C, C2C и нишевые вертикали.",
+            "Масштабируемая основа для роста ассортимента и аудитории.",
+            "Удобный путь пользователя: от публикации товара до сделки.",
+            "Инструменты доверия: профили, рейтинги, отзывы, модерация.",
+            "Возможность поэтапного развития: от MVP до полноценной торговой платформы.",
+        ],
+        "image": "images/Shmavito/shmavito_white.jpg",
+        "gallery": ["images/Shmavito/shmavito_white.jpg"],
     },
     {
         "id": 3,
-        "title": "Автоматизация CRM",
-        "short_description": "Интеграция CRM и автоматизация рутинных процессов отдела продаж.",
-        "full_description": (
-            "Настроили автоматическое распределение лидов, отчётность, цепочки писем "
-            "и интеграции с корпоративной почтой и телефонией."
+        "title": "Платформа для автоматизации",
+        "short_description": (
+            "Pusplexity — AI-платформа для автоматизации работы с изображениями "
+            "и документами в Telegram и веб-интерфейсе."
         ),
-        "image": "images/case3.svg",
+        "full_description": (
+            "Pusplexity — это AI-платформа для автоматизации работы с изображениями "
+            "и документами в Telegram и через веб-интерфейс. Сервис помогает бизнесу "
+            "быстрее создавать визуальный контент, обрабатывать фото и получать ответы "
+            "из внутренних документов без сложных инструментов и долгого обучения команды."
+        ),
+        "business_benefits": [
+            "Экономия времени сотрудников: рутинные задачи по изображениям и документам выполняются в чате за минуты.",
+            "Снижение затрат на производство контента: меньше ручной работы дизайнеров и подрядчиков на типовые задачи.",
+            "Быстрый доступ к знаниям компании: загрузка PDF/Word/Excel и ответы по базе документов в формате вопрос-ответ.",
+            "Рост скорости запуска маркетинговых материалов: генерация и редактирование изображений по текстовому запросу.",
+            "Удобное внедрение: работа через привычные каналы (Telegram + Web), без сложного интерфейса.",
+            "Контроль и безопасность: авторизация пользователей, лимиты, защита сессий и стабильная серверная архитектура.",
+        ],
+        "key_advantage": (
+            "Pusplexity превращает долгие и технически сложные процессы в простой диалог: "
+            "пишете задачу обычным языком — получаете готовый результат, сокращая операционные "
+            "издержки и ускоряя бизнес-процессы."
+        ),
+        "image": "images/Pusplexity/Pusplexity_1.jpg",
+        "gallery": [
+            "images/Pusplexity/Pusplexity_1.jpg",
+            "images/Pusplexity/Pusplexity_2.jpg",
+        ],
     },
     {
         "id": 4,
@@ -122,11 +194,80 @@ CASES = [
 
 
 def setup_logging(app: Flask) -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    # Reset handlers to avoid duplicated logs on app reloads.
+    app.logger.handlers.clear()
+    app.logger.setLevel(getattr(logging, app.config["LOG_LEVEL"], logging.INFO))
+    app.logger.propagate = False
+
+    log_format = logging.Formatter(
+        "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
     )
-    app.logger.info("Логирование инициализировано.")
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(log_format)
+    console_handler.setLevel(app.logger.level)
+    app.logger.addHandler(console_handler)
+
+    log_file = app.config["LOG_FILE"]
+    log_dir = os.path.dirname(log_file)
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
+
+    file_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=app.config["LOG_MAX_BYTES"],
+        backupCount=app.config["LOG_BACKUP_COUNT"],
+        encoding="utf-8",
+    )
+    file_handler.setFormatter(log_format)
+    file_handler.setLevel(app.logger.level)
+    app.logger.addHandler(file_handler)
+
+    werkzeug_logger = logging.getLogger("werkzeug")
+    werkzeug_logger.setLevel(app.logger.level)
+    werkzeug_logger.handlers.clear()
+    werkzeug_logger.addHandler(console_handler)
+    werkzeug_logger.addHandler(file_handler)
+
+    app.logger.info("Логирование инициализировано. Уровень: %s", app.config["LOG_LEVEL"])
+
+
+def register_request_logging(app: Flask) -> None:
+    @app.before_request
+    def log_request_start():
+        g.request_started_at = datetime.utcnow()
+        app.logger.info(
+            "Request started: method=%s path=%s ip=%s user_agent=%s",
+            request.method,
+            request.path,
+            request.remote_addr,
+            request.user_agent.string,
+        )
+
+    @app.after_request
+    def log_request_end(response):
+        started_at = getattr(g, "request_started_at", datetime.utcnow())
+        duration_ms = int((datetime.utcnow() - started_at).total_seconds() * 1000)
+        app.logger.info(
+            "Request finished: method=%s path=%s status=%s duration_ms=%s",
+            request.method,
+            request.path,
+            response.status_code,
+            duration_ms,
+        )
+        return response
+
+
+def register_error_handlers(app: Flask) -> None:
+    @app.errorhandler(404)
+    def handle_404(error):
+        app.logger.warning("404 Not Found: path=%s ip=%s", request.path, request.remote_addr)
+        return render_template("404.html"), 404
+
+    @app.errorhandler(500)
+    def handle_500(error):
+        app.logger.exception("500 Internal Server Error: path=%s", request.path)
+        return render_template("500.html"), 500
 
 
 def create_default_admin(app: Flask) -> None:
@@ -155,6 +296,8 @@ def create_app() -> Flask:
     login_manager.login_message_category = "warning"
 
     setup_logging(app)
+    register_request_logging(app)
+    register_error_handlers(app)
     create_default_admin(app)
 
     @login_manager.user_loader
