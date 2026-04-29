@@ -30,7 +30,9 @@ class Config:
     LOG_FILE = os.environ.get("LOG_FILE", "logs/app.log")
     LOG_MAX_BYTES = int(os.environ.get("LOG_MAX_BYTES", "1048576"))
     LOG_BACKUP_COUNT = int(os.environ.get("LOG_BACKUP_COUNT", "5"))
+    LOG_TO_CONSOLE = os.environ.get("LOG_TO_CONSOLE", "false").lower() == "true"
     PII_LOGGING_ENABLED = os.environ.get("PII_LOGGING_ENABLED", "false").lower() == "true"
+    RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
 
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true"
     SESSION_COOKIE_HTTPONLY = True

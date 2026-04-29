@@ -208,10 +208,12 @@ def setup_logging(app: Flask) -> None:
         "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
     )
 
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(log_format)
-    console_handler.setLevel(app.logger.level)
-    app.logger.addHandler(console_handler)
+    console_handler = None
+    if app.config["LOG_TO_CONSOLE"]:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(log_format)
+        console_handler.setLevel(app.logger.level)
+        app.logger.addHandler(console_handler)
 
     log_file = app.config["LOG_FILE"]
     log_dir = os.path.dirname(log_file)
@@ -231,7 +233,8 @@ def setup_logging(app: Flask) -> None:
     werkzeug_logger = logging.getLogger("werkzeug")
     werkzeug_logger.setLevel(app.logger.level)
     werkzeug_logger.handlers.clear()
-    werkzeug_logger.addHandler(console_handler)
+    if console_handler:
+        werkzeug_logger.addHandler(console_handler)
     werkzeug_logger.addHandler(file_handler)
 
     app.logger.info("Логирование инициализировано. Уровень: %s", app.config["LOG_LEVEL"])

@@ -143,7 +143,9 @@ chmod 775 database logs
 - `LOG_FILE` — путь к файлу логов
 - `LOG_MAX_BYTES` — максимальный размер файла до ротации
 - `LOG_BACKUP_COUNT` — количество архивных лог-файлов
+- `LOG_TO_CONSOLE` — выводить логи в консоль (`true/false`)
 - `PII_LOGGING_ENABLED` — включить/выключить логирование персональных данных (рекомендуется `false`)
+- `RATELIMIT_STORAGE_URI` — backend для Flask-Limiter (например `memory://` или Redis URI)
 
 ## Security hardening
 
