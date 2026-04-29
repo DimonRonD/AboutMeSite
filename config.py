@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 from dotenv import load_dotenv
 
@@ -29,3 +30,18 @@ class Config:
     LOG_FILE = os.environ.get("LOG_FILE", "logs/app.log")
     LOG_MAX_BYTES = int(os.environ.get("LOG_MAX_BYTES", "1048576"))
     LOG_BACKUP_COUNT = int(os.environ.get("LOG_BACKUP_COUNT", "5"))
+    PII_LOGGING_ENABLED = os.environ.get("PII_LOGGING_ENABLED", "false").lower() == "true"
+
+    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true"
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax")
+    REMEMBER_COOKIE_SECURE = os.environ.get("REMEMBER_COOKIE_SECURE", "true").lower() == "true"
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = os.environ.get("REMEMBER_COOKIE_SAMESITE", "Lax")
+    PERMANENT_SESSION_LIFETIME = timedelta(
+        minutes=int(os.environ.get("PERMANENT_SESSION_MINUTES", "480"))
+    )
+
+    SECURITY_HEADERS_ENABLED = (
+        os.environ.get("SECURITY_HEADERS_ENABLED", "true").lower() == "true"
+    )

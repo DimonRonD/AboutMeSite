@@ -2,6 +2,7 @@ Flask
 Flask-Login
 Flask-SQLAlchemy
 Flask-WTF
+Flask-Limiter
 email-validator
 python-dotenv
 gunicorn

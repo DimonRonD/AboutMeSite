@@ -1,13 +1,17 @@
 import logging
 import os
+import re
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
 from flask import Flask, flash, g, redirect, render_template, request, url_for
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 from wtforms import EmailField, PasswordField, StringField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Email, Length, Optional, Regexp
@@ -17,6 +21,7 @@ from config import Config
 db = SQLAlchemy()
 login_manager = LoginManager()
 csrf = CSRFProtect()
+limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 
 class Admin(UserMixin, db.Model):
@@ -232,16 +237,52 @@ def setup_logging(app: Flask) -> None:
     app.logger.info("Логирование инициализировано. Уровень: %s", app.config["LOG_LEVEL"])
 
 
+def _mask_email(value: str) -> str:
+    if not value:
+        return "***"
+    if "@" not in value:
+        return "***"
+    name, domain = value.split("@", 1)
+    return f"{name[:1]}***@{domain}"
+
+
+def _mask_ip(value: str) -> str:
+    if not value:
+        return "unknown"
+    if ":" in value:
+        return re.sub(r":[0-9a-fA-F]{1,4}$", ":****", value)
+    parts = value.split(".")
+    if len(parts) == 4:
+        return ".".join(parts[:3] + ["***"])
+    return "***"
+
+
+def validate_security_config(app: Flask) -> None:
+    if app.config["DEBUG"]:
+        app.logger.warning("DEBUG mode is enabled. Disable in production.")
+        return
+
+    secret_key = app.config.get("SECRET_KEY") or ""
+    default_username = (app.config.get("DEFAULT_ADMIN_USERNAME") or "").lower()
+    default_password = app.config.get("DEFAULT_ADMIN_PASSWORD") or ""
+
+    if len(secret_key) < 32 or "change-me" in secret_key.lower():
+        raise RuntimeError("Insecure SECRET_KEY for production.")
+    if default_username == "admin" and default_password == "admin123":
+        raise RuntimeError("Default admin credentials are forbidden in production.")
+    if len(default_password) < 12:
+        raise RuntimeError("Admin password must be at least 12 characters in production.")
+
+
 def register_request_logging(app: Flask) -> None:
     @app.before_request
     def log_request_start():
         g.request_started_at = datetime.utcnow()
         app.logger.info(
-            "Request started: method=%s path=%s ip=%s user_agent=%s",
+            "Request started: method=%s path=%s ip=%s",
             request.method,
             request.path,
-            request.remote_addr,
-            request.user_agent.string,
+            _mask_ip(request.remote_addr),
         )
 
     @app.after_request
@@ -258,10 +299,35 @@ def register_request_logging(app: Flask) -> None:
         return response
 
 
+def register_security_headers(app: Flask) -> None:
+    if not app.config["SECURITY_HEADERS_ENABLED"]:
+        return
+
+    @app.after_request
+    def add_security_headers(response):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "img-src 'self' data:; "
+            "script-src 'self' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "font-src 'self' data:; "
+            "object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+        )
+        if request.headers.get("X-Forwarded-Proto", "").lower() == "https":
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains; preload"
+            )
+        return response
+
+
 def register_error_handlers(app: Flask) -> None:
     @app.errorhandler(404)
     def handle_404(error):
-        app.logger.warning("404 Not Found: path=%s ip=%s", request.path, request.remote_addr)
+        app.logger.warning("404 Not Found: path=%s ip=%s", request.path, _mask_ip(request.remote_addr))
         return render_template("404.html"), 404
 
     @app.errorhandler(500)
@@ -287,16 +353,21 @@ def create_default_admin(app: Flask) -> None:
 def create_app() -> Flask:
     app = Flask(__name__)
     app.config.from_object(Config)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     db.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
+    limiter.init_app(app)
     login_manager.login_view = "admin_login"
     login_manager.login_message = "Для доступа к админ-панели выполните вход."
     login_manager.login_message_category = "warning"
+    login_manager.session_protection = "strong"
 
     setup_logging(app)
+    validate_security_config(app)
     register_request_logging(app)
+    register_security_headers(app)
     register_error_handlers(app)
     create_default_admin(app)
 
@@ -340,14 +411,15 @@ def create_app() -> Flask:
             app.logger.info(
                 "Новая заявка: name=%s, email=%s, ip=%s",
                 form.name.data,
-                form.email.data,
-                request.remote_addr,
+                form.email.data if app.config["PII_LOGGING_ENABLED"] else _mask_email(form.email.data),
+                request.remote_addr if app.config["PII_LOGGING_ENABLED"] else _mask_ip(request.remote_addr),
             )
             flash("Спасибо! Заявка успешно отправлена.", "success")
             return redirect(url_for("contact"))
         return render_template("contact.html", form=form)
 
     @app.route("/admin/login", methods=["GET", "POST"])
+    @limiter.limit("5 per minute; 20 per hour")
     def admin_login():
         if current_user.is_authenticated:
             return redirect(url_for("admin_dashboard"))

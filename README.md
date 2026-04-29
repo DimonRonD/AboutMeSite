@@ -12,6 +12,7 @@
   - отметка как "прочитано";
   - удаление заявок.
 - Полноценное логирование: консоль + файл с ротацией, HTTP-запросы, 404/500 ошибки.
+- Усиленная безопасность: rate limit на вход в админку, безопасные cookie, security headers, маскирование PII в логах.
 
 ## Актуальные кейсы
 
@@ -116,6 +117,14 @@ docker compose down
 
 SQLite-база хранится в локальной папке `database/` через volume `./database:/app/database`.
 
+Важно: контейнер запускается от непривилегированного пользователя `appuser`, поэтому
+на сервере у папок `database/` и `logs/` должны быть права на запись:
+
+```bash
+mkdir -p database logs
+chmod 775 database logs
+```
+
 ## Доступ в админ-панель
 
 - URL: `/admin/login`
@@ -134,6 +143,14 @@ SQLite-база хранится в локальной папке `database/` ч
 - `LOG_FILE` — путь к файлу логов
 - `LOG_MAX_BYTES` — максимальный размер файла до ротации
 - `LOG_BACKUP_COUNT` — количество архивных лог-файлов
+- `PII_LOGGING_ENABLED` — включить/выключить логирование персональных данных (рекомендуется `false`)
+
+## Security hardening
+
+- Rate limit для `POST /admin/login` (ограничение попыток входа по IP).
+- Fail-fast проверка production-конфига: слабый `SECRET_KEY` и дефолтные admin-учетные данные запрещены.
+- Безопасные cookie-параметры с поддержкой HTTPS за reverse proxy.
+- Security headers: CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy.
 
 ## Продакшен-домен
 
