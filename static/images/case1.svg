@@ -1,0 +1,6 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2563eb"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+  <rect width="1200" height="700" fill="url(#g)"/>
+  <text x="80" y="320" fill="white" font-size="64" font-family="Segoe UI, Arial" font-weight="700">Telegram-бот для бизнеса</text>
+  <text x="80" y="390" fill="white" font-size="32" font-family="Segoe UI, Arial">Автоматизация заявок и коммуникации</text>
+</svg>

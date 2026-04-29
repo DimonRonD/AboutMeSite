@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Админ-панель | AboutMe{% endblock %}
+
+{% block content %}
+<section class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h1 class="fw-bold mb-0">Заявки обратной связи</h1>
+        <a class="btn btn-outline-secondary" href="{{ url_for('admin_logout') }}">Выйти</a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table align-middle table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Имя</th>
+                    <th>Email</th>
+                    <th>Телефон</th>
+                    <th>Тема</th>
+                    <th>Сообщение</th>
+                    <th>Статус</th>
+                    <th>Создано</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in requests_data %}
+                    <tr class="{% if item.is_read %}table-success-subtle{% endif %}">
+                        <td>{{ item.id }}</td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.email }}</td>
+                        <td>{{ item.phone or '-' }}</td>
+                        <td>{{ item.subject }}</td>
+                        <td class="text-break">{{ item.message }}</td>
+                        <td>
+                            {% if item.is_read %}
+                                <span class="badge text-bg-success">Прочитано</span>
+                            {% else %}
+                                <span class="badge text-bg-warning">Новое</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                {% if not item.is_read %}
+                                    <form method="post" action="{{ url_for('mark_read', request_id=item.id) }}">
+                                        {{ mark_form.hidden_tag() }}
+                                        <button type="submit" class="btn btn-sm btn-success">Прочитано</button>
+                                    </form>
+                                {% endif %}
+                                <form method="post" action="{{ url_for('delete_request', request_id=item.id) }}" onsubmit="return confirm('Удалить заявку?');">
+                                    {{ delete_form.hidden_tag() }}
+                                    <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">Пока нет ни одной заявки.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

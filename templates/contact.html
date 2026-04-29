@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Обратная связь | AboutMe{% endblock %}
+
+{% block content %}
+<section class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4 p-md-5">
+                    <h1 class="fw-bold mb-3">Форма обратной связи</h1>
+                    <p class="text-muted mb-4">Оставьте заявку, и мы свяжемся с вами в ближайшее время.</p>
+
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control", placeholder="Введите ваше имя") }}
+                            {% for error in form.name.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.email.label(class="form-label") }}
+                                {{ form.email(class="form-control", placeholder="example@mail.com") }}
+                                {% for error in form.email.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.phone.label(class="form-label") }}
+                                {{ form.phone(class="form-control", placeholder="+7 (900) 000-00-00") }}
+                                {% for error in form.phone.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            {{ form.subject.label(class="form-label") }}
+                            {{ form.subject(class="form-control", placeholder="Тема обращения") }}
+                            {% for error in form.subject.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-4">
+                            {{ form.message.label(class="form-label") }}
+                            {{ form.message(class="form-control", rows="5", placeholder="Опишите ваш запрос") }}
+                            {% for error in form.message.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        {{ form.submit(class="btn btn-primary px-4") }}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
