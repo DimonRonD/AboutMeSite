@@ -568,9 +568,13 @@ def _build_pusplexity_overview_answer() -> str:
 def _is_case_overview_request(text: str) -> bool:
     normalized = (text or "").lower()
     intent_markers = [
+        "что у вас за",
         "что скажешь",
         "расскажи",
+        "что за",
         "что это",
+        "что такое",
+        "какой",
         "о проекте",
         "о кейсе",
         "какие возможности",
@@ -612,6 +616,39 @@ def _build_case_overview_answer(case: dict) -> str:
             lines.append(f"- {item}")
     lines.append("Если хотите, могу дать сравнение с другими кейсами под вашу задачу.")
     return "\n".join(lines)
+
+
+def _find_mentioned_cases(text: str) -> list[dict]:
+    normalized = (text or "").lower()
+    matched = []
+    for case in CASES:
+        if any(marker and marker in normalized for marker in _case_markers(case)):
+            matched.append(case)
+    return matched
+
+
+def _is_unclear_project_question(text: str) -> bool:
+    normalized = (text or "").lower().strip()
+    if not normalized:
+        return True
+    clear_markers = [
+        "что",
+        "как",
+        "зачем",
+        "какие",
+        "какой",
+        "возможност",
+        "функционал",
+        "цена",
+        "стоим",
+        "срок",
+        "интеграц",
+        "внедр",
+        "поможет",
+    ]
+    if any(marker in normalized for marker in clear_markers):
+        return False
+    return len(normalized.split()) <= 5
 
 
 def _mask_ip(value: str) -> str:
@@ -875,7 +912,12 @@ def create_app() -> Flask:
         )
         memory_questions = [row.question for row in reversed(memory_rows)]
 
-        if not _is_in_site_scope_with_history(message, memory_questions):
+        mentioned_cases = _find_mentioned_cases(message)
+        has_project_context = bool(mentioned_cases) or _is_in_site_scope_with_history(
+            message, memory_questions
+        )
+
+        if not has_project_context:
             return jsonify(
                 {
                     "ok": True,
@@ -885,6 +927,42 @@ def create_app() -> Flask:
                     ),
                 }
             )
+
+        if mentioned_cases and _is_unclear_project_question(message):
+            case_titles = ", ".join(case["title"] for case in mentioned_cases[:3])
+            fallback_answer = (
+                f"Уточните, пожалуйста, что именно по проекту(ам) {case_titles} вам важно: "
+                "функционал, сроки запуска, стоимость, интеграции или ожидаемый бизнес-эффект?"
+            )
+            if openai_client:
+                try:
+                    clarify_response = openai_client.responses.create(
+                        model=app.config["OPENAI_CHAT_MODEL"],
+                        max_output_tokens=160,
+                        reasoning={"effort": app.config["OPENAI_REASONING_EFFORT"]},
+                        input=[
+                            {
+                                "role": "system",
+                                "content": (
+                                    "Ты консультант по проектам сайта. Пользователь упомянул проект(ы), "
+                                    "но вопрос неясен. Сформулируй один короткий уточняющий вопрос, "
+                                    "вежливо и по-деловому, без лишних деталей."
+                                ),
+                            },
+                            {
+                                "role": "user",
+                                "content": (
+                                    f"Проекты: {case_titles}. "
+                                    f"Фраза пользователя: {message}"
+                                ),
+                            },
+                        ],
+                    )
+                    clarify_text = (clarify_response.output_text or "").strip()
+                    return jsonify({"ok": True, "answer": clarify_text or fallback_answer})
+                except Exception:
+                    return jsonify({"ok": True, "answer": fallback_answer})
+            return jsonify({"ok": True, "answer": fallback_answer})
 
         if _is_project_list_request(message) and any(
             marker in message.lower() for marker in ["телега", "телеграм", "telegram", "тг"]
