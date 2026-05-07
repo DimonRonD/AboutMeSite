@@ -8,11 +8,17 @@ from chromadb.utils import embedding_functions
 class RagService:
     def __init__(self, app_config):
         self._config = app_config
+        chroma_api_key = app_config.get("CHROMA_OPENAI_API_KEY") or app_config.get("OPENAI_API_KEY")
+        if not chroma_api_key:
+            raise ValueError(
+                "OpenAI API key for Chroma is not set. Configure CHROMA_OPENAI_API_KEY "
+                "or OPENAI_API_KEY."
+            )
         self._client = chromadb.PersistentClient(path=app_config["CHROMA_DB_PATH"])
         self._collection = self._client.get_or_create_collection(
             name=app_config["CHROMA_COLLECTION_NAME"],
             embedding_function=embedding_functions.OpenAIEmbeddingFunction(
-                api_key=app_config["OPENAI_API_KEY"],
+                api_key=chroma_api_key,
                 model_name=app_config["OPENAI_EMBEDDING_MODEL"],
             ),
         )

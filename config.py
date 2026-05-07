@@ -48,6 +48,7 @@ class Config:
         os.environ.get("SECURITY_HEADERS_ENABLED", "true").lower() == "true"
     )
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+    CHROMA_OPENAI_API_KEY = os.environ.get("CHROMA_OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
     OPENAI_CHAT_MODEL = os.environ.get("OPENAI_CHAT_MODEL", "gpt-5-nano-2025-08-07")
     OPENAI_EMBEDDING_MODEL = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
     CHROMA_DB_PATH = os.environ.get("CHROMA_DB_PATH", "database/chroma")

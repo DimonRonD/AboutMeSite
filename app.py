@@ -380,7 +380,16 @@ def _is_in_site_scope_with_history(current_text: str, history_questions: list[st
 
 def _is_project_list_request(text: str) -> bool:
     normalized = (text or "").lower()
-    list_markers = ["какие", "перечисли", "список", "проекты", "кейсы"]
+    list_markers = [
+        "какие",
+        "каких",
+        "в каких",
+        "перечисли",
+        "список",
+        "проекты",
+        "проектах",
+        "кейсы",
+    ]
     return any(marker in normalized for marker in list_markers)
 
 
