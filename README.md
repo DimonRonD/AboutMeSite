@@ -113,9 +113,22 @@ docker compose up --build -d
 ```bash
 docker compose logs -f
 docker compose down
+docker compose ps
 ```
 
-SQLite-база хранится в локальной папке `database/` через volume `./database:/app/database`.
+Используемые volume:
+
+- `./database:/app/database` — SQLite + ChromaDB
+- `./logs:/app/logs` — логи приложения
+- `./rag_source:/app/rag_source:ro` — данные RAG (только чтение в контейнере)
+
+Проверка здоровья контейнера:
+
+```bash
+docker compose ps
+```
+
+Статус `healthy` означает, что приложение успешно отвечает внутри контейнера.
 
 Важно: контейнер запускается от непривилегированного пользователя `appuser`, поэтому
 на сервере у папок `database/` и `logs/` должны быть права на запись:

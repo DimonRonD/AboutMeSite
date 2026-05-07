@@ -54,6 +54,17 @@
                 </div>
             {% endif %}
 
+            {% if case.tangible_benefit %}
+                <div class="alert alert-success mt-3 mb-0">
+                    <strong>Ощутимая выгода!</strong>
+                    <ul class="mb-0 mt-2 ps-3">
+                        {% for item in case.tangible_benefit %}
+                            <li class="mb-1">{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
             <div class="d-flex gap-2 mt-4">
                 <a href="{{ url_for('contact') }}" class="btn btn-primary">Обсудить похожий проект</a>
                 <a href="{{ url_for('cases') }}" class="btn btn-outline-secondary">Назад к кейсам</a>

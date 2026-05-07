@@ -47,3 +47,15 @@ class Config:
     SECURITY_HEADERS_ENABLED = (
         os.environ.get("SECURITY_HEADERS_ENABLED", "true").lower() == "true"
     )
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+    OPENAI_CHAT_MODEL = os.environ.get("OPENAI_CHAT_MODEL", "gpt-5-nano-2025-08-07")
+    OPENAI_EMBEDDING_MODEL = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+    CHROMA_DB_PATH = os.environ.get("CHROMA_DB_PATH", "database/chroma")
+    CHROMA_COLLECTION_NAME = os.environ.get("CHROMA_COLLECTION_NAME", "aboutme_projects")
+    RAG_SOURCE_DIR = os.environ.get("RAG_SOURCE_DIR", "rag_source")
+    RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "4"))
+    CHAT_MAX_MESSAGE_LENGTH = int(os.environ.get("CHAT_MAX_MESSAGE_LENGTH", "250"))
+    CHAT_MEMORY_LIMIT = int(os.environ.get("CHAT_MEMORY_LIMIT", "10"))
+    OPENAI_MAX_OUTPUT_TOKENS = int(os.environ.get("OPENAI_MAX_OUTPUT_TOKENS", "500"))
+    OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", "0.1"))
+    OPENAI_REASONING_EFFORT = os.environ.get("OPENAI_REASONING_EFFORT", "minimal")

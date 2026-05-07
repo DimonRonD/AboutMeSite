@@ -6,3 +6,5 @@ Flask-Limiter
 email-validator
 python-dotenv
 gunicorn
+openai
+chromadb
