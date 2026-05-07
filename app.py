@@ -294,22 +294,30 @@ def setup_logging(app: Flask) -> None:
     if log_dir:
         os.makedirs(log_dir, exist_ok=True)
 
-    file_handler = RotatingFileHandler(
-        log_file,
-        maxBytes=app.config["LOG_MAX_BYTES"],
-        backupCount=app.config["LOG_BACKUP_COUNT"],
-        encoding="utf-8",
-    )
-    file_handler.setFormatter(log_format)
-    file_handler.setLevel(app.logger.level)
-    app.logger.addHandler(file_handler)
+    file_handler = None
+    try:
+        file_handler = RotatingFileHandler(
+            log_file,
+            maxBytes=app.config["LOG_MAX_BYTES"],
+            backupCount=app.config["LOG_BACKUP_COUNT"],
+            encoding="utf-8",
+        )
+        file_handler.setFormatter(log_format)
+        file_handler.setLevel(app.logger.level)
+        app.logger.addHandler(file_handler)
+    except (PermissionError, OSError):
+        app.logger.warning(
+            "Не удалось инициализировать файловый лог '%s'. Логи будут писатьcя только в консоль.",
+            log_file,
+        )
 
     werkzeug_logger = logging.getLogger("werkzeug")
     werkzeug_logger.setLevel(app.logger.level)
     werkzeug_logger.handlers.clear()
     if console_handler:
         werkzeug_logger.addHandler(console_handler)
-    werkzeug_logger.addHandler(file_handler)
+    if file_handler:
+        werkzeug_logger.addHandler(file_handler)
 
     app.logger.info("Логирование инициализировано. Уровень: %s", app.config["LOG_LEVEL"])
 
@@ -461,6 +469,55 @@ def _project_brief(case: dict) -> str:
     if not full_description:
         return "Решение под бизнес-задачи клиента."
     return full_description[:180].rstrip() + ("..." if len(full_description) > 180 else "")
+
+
+def _is_multi_project_interest_request(text: str) -> bool:
+    normalized = (text or "").lower()
+    interest_markers = ["интерес", "заинтерес", "хочу", "расскажи", "подробн", "сравни"]
+    project_markers = [
+        "pusplexity",
+        "пусплекс",
+        "petlibot",
+        "петлибот",
+        "nutribot",
+        "нутрибот",
+        "шмавито",
+        "aboutmesite",
+    ]
+    has_interest = any(marker in normalized for marker in interest_markers)
+    project_hits = sum(1 for marker in project_markers if marker in normalized)
+    return has_interest and project_hits >= 2
+
+
+def _build_multi_project_interest_answer(text: str) -> str:
+    normalized = (text or "").lower()
+    selected = []
+    marker_map = [
+        ("pusplexity", ["pusplexity", "пусплекс"]),
+        ("petlibot", ["petlibot", "петлибот"]),
+        ("nutribot", ["nutribot", "нутрибот"]),
+        ("шмавито", ["шмавито"]),
+        ("aboutmesite", ["aboutmesite"]),
+    ]
+
+    for case in CASES:
+        case_text = _case_text(case)
+        for _, markers in marker_map:
+            if any(marker in normalized for marker in markers) and any(
+                marker in case_text for marker in markers
+            ):
+                if case not in selected:
+                    selected.append(case)
+                break
+
+    if len(selected) < 2:
+        return ""
+
+    lines = ["Отличный выбор. Коротко по этим проектам:"]
+    for case in selected:
+        lines.append(f"- {case['title']}: {_project_brief(case)}")
+    lines.append("Если хотите, сравню их по срокам запуска, бюджету и бизнес-эффекту.")
+    return "\n".join(lines)
 
 
 def _mask_ip(value: str) -> str:
@@ -754,6 +811,11 @@ def create_app() -> Flask:
                     answer_lines.append(f"- {item['title']}: {_project_brief(item)}")
                 answer_lines.append("Могу сузить до 1-2 лучших вариантов под вашу конкретную задачу.")
                 return jsonify({"ok": True, "answer": "\n".join(answer_lines)})
+
+        if _is_multi_project_interest_request(message):
+            instant_answer = _build_multi_project_interest_answer(message)
+            if instant_answer:
+                return jsonify({"ok": True, "answer": instant_answer})
 
         rag_context = []
         if rag_service:
