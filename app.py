@@ -1,7 +1,7 @@
 import logging
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging.handlers import RotatingFileHandler
 
 from flask import Flask, flash, g, jsonify, redirect, render_template, request, url_for
@@ -869,7 +869,36 @@ def create_app() -> Flask:
 
     @app.route("/logs")
     def logs():
-        sessions = ChatLogSession.query.order_by(ChatLogSession.created_at.desc()).all()
+        selected_date_raw = (request.args.get("date") or "").strip()
+        try:
+            selected_date = (
+                datetime.strptime(selected_date_raw, "%Y-%m-%d").date()
+                if selected_date_raw
+                else datetime.utcnow().date()
+            )
+        except ValueError:
+            selected_date = datetime.utcnow().date()
+
+        day_start = datetime.combine(selected_date, datetime.min.time())
+        day_end = day_start + timedelta(days=1)
+
+        all_sessions = ChatLogSession.query.order_by(ChatLogSession.created_at.desc()).all()
+        available_dates = []
+        seen_dates = set()
+        for session in all_sessions:
+            day_label = session.created_at.date().isoformat()
+            if day_label not in seen_dates:
+                seen_dates.add(day_label)
+                available_dates.append(day_label)
+
+        sessions = (
+            ChatLogSession.query.filter(
+                ChatLogSession.created_at >= day_start,
+                ChatLogSession.created_at < day_end,
+            )
+            .order_by(ChatLogSession.created_at.desc())
+            .all()
+        )
         session_keys = [session.session_key for session in sessions]
         messages = []
         if session_keys:
@@ -881,7 +910,26 @@ def create_app() -> Flask:
         grouped_messages = {}
         for message in messages:
             grouped_messages.setdefault(message.session_key, []).append(message)
-        return render_template("logs.html", sessions=sessions, grouped_messages=grouped_messages)
+
+        user_blocks = {}
+        for session in sessions:
+            block_key = session.email_masked
+            if block_key not in user_blocks:
+                user_blocks[block_key] = {
+                    "name": session.name,
+                    "email_masked": session.email_masked,
+                    "sessions": [],
+                }
+            user_blocks[block_key]["sessions"].append(session)
+
+        return render_template(
+            "logs.html",
+            sessions=sessions,
+            grouped_messages=grouped_messages,
+            selected_date=selected_date.isoformat(),
+            available_dates=available_dates,
+            user_blocks=list(user_blocks.values()),
+        )
 
     @app.route("/admin/login", methods=["GET", "POST"])
     @limiter.limit("5 per minute; 20 per hour")

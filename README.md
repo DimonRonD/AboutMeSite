@@ -1,11 +1,19 @@
 # AboutMeSite (Flask)
 
-Полноценный веб-сайт на Flask с кейсами, формой обратной связи, защищенной админ-панелью и современным динамическим hero-блоком.
+Полноценный веб-сайт на Flask с кейсами, формой обратной связи, защищенной админ-панелью, AI-консультантом ПетлиБот и RAG-базой знаний.
 
 ## Функционал
 
 - Главная страница с hero-блоком, ротацией 3 текстов и блоком позиционирования "Почему выбирают нас".
 - Раздел кейсов с отдельной детальной страницей для каждого кейса и расширенными контент-блоками.
+- Онлайн-консультант ПетлиБот:
+  - обязательный вход по имени и email;
+  - память последних 10 вопросов по email;
+  - очистка памяти кнопкой и командой `очистить память`;
+  - проверка длины сообщения (до 250 символов) до отправки;
+  - индикатор генерации ответа в UI.
+- Публичная страница логов чата (`/logs`) с маскированием email.
+- RAG-поиск по локальным файлам из `rag_source/` через ChromaDB с автосинхронизацией при старте.
 - Форма обратной связи (имя, email, телефон, тема, сообщение) с валидацией.
 - Админ-панель с авторизацией и управлением заявками:
   - просмотр всех обращений;
@@ -32,6 +40,8 @@
 - Flask-WTF (CSRF + формы)
 - Jinja2
 - SQLite
+- ChromaDB
+- OpenAI API
 - Bootstrap 5
 
 ## Структура проекта
@@ -40,9 +50,12 @@
 AboutMeSite/
 ├── app.py
 ├── config.py
+├── rag_service.py
 ├── requirements.txt
 ├── README.md
 ├── database/
+├── rag_source/
+├── scripts/
 ├── templates/
 └── static/
     ├── css/
@@ -145,6 +158,32 @@ chmod 775 database logs
 - Пароль: `admin123`
 
 Рекомендуется сменить `DEFAULT_ADMIN_PASSWORD` и `SECRET_KEY` в `.env` перед production-запуском.
+
+## Ключевые переменные окружения для AI/RAG
+
+- `OPENAI_API_KEY` — API-ключ OpenAI.
+- `OPENAI_CHAT_MODEL` — модель для ответа в чате.
+- `OPENAI_EMBEDDING_MODEL` — модель эмбеддингов для RAG.
+- `OPENAI_MAX_OUTPUT_TOKENS` — лимит токенов на ответ.
+- `OPENAI_REASONING_EFFORT` — уровень reasoning (`minimal` рекомендован для стабильности).
+- `CHROMA_DB_PATH` — путь к локальной базе ChromaDB.
+- `CHROMA_COLLECTION_NAME` — имя коллекции.
+- `RAG_SOURCE_DIR` — папка исходных файлов для RAG (`rag_source`).
+- `RAG_TOP_K` — количество фрагментов контекста.
+- `CHAT_MAX_MESSAGE_LENGTH` — лимит длины сообщения пользователя.
+- `CHAT_MEMORY_LIMIT` — размер памяти диалога по email.
+
+## Обновление на сервере
+
+```bash
+cd /path/to/AboutMeSite
+git fetch origin
+git checkout main
+git pull origin main
+docker compose down
+docker compose up --build -d
+docker compose ps
+```
 
 ## Логирование
 

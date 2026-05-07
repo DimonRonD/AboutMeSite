@@ -7,21 +7,10 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      FLASK_DEBUG: "false"
-      LOG_TO_CONSOLE: "true"
     volumes:
       - ./database:/app/database
       - ./logs:/app/logs
-      - ./rag_source:/app/rag_source:ro
-    ports:
-      - "5000:5000"
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000').read()"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 25s
+      - ./rag_source:/app/rag_source
     networks:
       - n8n_default
     labels:
