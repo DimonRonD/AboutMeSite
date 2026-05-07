@@ -543,6 +543,77 @@ def _build_petlibot_features_answer() -> str:
     )
 
 
+def _is_pusplexity_overview_request(text: str) -> bool:
+    normalized = (text or "").lower()
+    project_markers = ["pusplexity", "пусплекс", "пусплекси", "пусплексити"]
+    intent_markers = ["что", "скажи", "расскажи", "о ", "функционал", "возможност", "для чего"]
+    return any(marker in normalized for marker in project_markers) and any(
+        marker in normalized for marker in intent_markers
+    )
+
+
+def _build_pusplexity_overview_answer() -> str:
+    return (
+        "Pusplexity — это AI-платформа для автоматизации работы с изображениями и документами "
+        "через Telegram и веб-интерфейс.\n"
+        "Ключевые возможности:\n"
+        "- Генерация и обработка изображений по текстовым запросам.\n"
+        "- Быстрый поиск ответов по базе документов (RAG-сценарии).\n"
+        "- Работа в удобных каналах: Telegram и Web.\n"
+        "- Ускорение типовых задач команды и снижение ручной нагрузки.\n"
+        "Если хотите, могу сравнить Pusplexity с ПетлиБотом по задачам, стоимости и срокам запуска."
+    )
+
+
+def _is_case_overview_request(text: str) -> bool:
+    normalized = (text or "").lower()
+    intent_markers = [
+        "что скажешь",
+        "расскажи",
+        "что это",
+        "о проекте",
+        "о кейсе",
+        "какие возможности",
+        "для чего",
+    ]
+    return any(marker in normalized for marker in intent_markers)
+
+
+def _case_markers(case: dict) -> list[str]:
+    title = (case.get("title") or "").lower()
+    markers = [title]
+    if "nutribot" in title:
+        markers.extend(["nutribot", "нутрибот"])
+    if "шмавито" in title:
+        markers.extend(["шмавито", "shmavito"])
+    if "платформа для автоматизации" in title or "pusplexity" in _case_text(case):
+        markers.extend(["pusplexity", "пусплекс", "пусплекси", "пусплексити"])
+    if "корпоративного сайта" in title:
+        markers.extend(["aboutmesite", "корпоративный сайт", "about me site"])
+    if "ai-ассистент" in title:
+        markers.extend(["петлибот", "petlibot", "ai-ассистент"])
+    return markers
+
+
+def _match_case_for_request(text: str) -> dict | None:
+    normalized = (text or "").lower()
+    for case in CASES:
+        if any(marker and marker in normalized for marker in _case_markers(case)):
+            return case
+    return None
+
+
+def _build_case_overview_answer(case: dict) -> str:
+    lines = [f"{case['title']} — {_project_brief(case)}"]
+    tangible = case.get("tangible_benefit") or []
+    if tangible:
+        lines.append("Ощутимая выгода:")
+        for item in tangible[:3]:
+            lines.append(f"- {item}")
+    lines.append("Если хотите, могу дать сравнение с другими кейсами под вашу задачу.")
+    return "\n".join(lines)
+
+
 def _mask_ip(value: str) -> str:
     if not value:
         return "unknown"
@@ -842,6 +913,14 @@ def create_app() -> Flask:
 
         if _is_petlibot_features_request(message):
             return jsonify({"ok": True, "answer": _build_petlibot_features_answer()})
+
+        if _is_pusplexity_overview_request(message):
+            return jsonify({"ok": True, "answer": _build_pusplexity_overview_answer()})
+
+        if _is_case_overview_request(message):
+            matched_case = _match_case_for_request(message)
+            if matched_case:
+                return jsonify({"ok": True, "answer": _build_case_overview_answer(matched_case)})
 
         rag_context = []
         if rag_service:
