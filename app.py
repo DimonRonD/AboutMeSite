@@ -470,6 +470,24 @@ def _projects_for_topic(text: str) -> list[dict]:
     return []
 
 
+def _is_telegram_projects_request(text: str) -> bool:
+    normalized = (text or "").lower()
+    telegram_markers = ["телега", "телеграм", "telegram", "тг"]
+    project_markers = ["проект", "проекты", "проектах", "кейс", "кейсы", "какие", "в каких"]
+    return any(marker in normalized for marker in telegram_markers) and any(
+        marker in normalized for marker in project_markers
+    )
+
+
+def _get_telegram_projects() -> list[dict]:
+    telegram_projects = []
+    for case in CASES:
+        case_text = _case_text(case)
+        if "telegram" in case_text or "телеграм" in case_text:
+            telegram_projects.append(case)
+    return telegram_projects
+
+
 def _project_brief(case: dict) -> str:
     short_description = (case.get("short_description") or "").strip()
     if short_description:
@@ -996,10 +1014,8 @@ def create_app() -> Flask:
         if len(mentioned_cases) == 1:
             return jsonify({"ok": True, "answer": _build_case_overview_answer(mentioned_cases[0])})
 
-        if _is_project_list_request(message) and any(
-            marker in message.lower() for marker in ["телега", "телеграм", "telegram", "тг"]
-        ):
-            matched_projects = _projects_for_topic(message)
+        if _is_telegram_projects_request(message):
+            matched_projects = _get_telegram_projects()
             if matched_projects:
                 answer_lines = ["Проекты с интеграцией Telegram на этом сайте:"]
                 for item in matched_projects:
