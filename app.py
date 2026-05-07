@@ -964,6 +964,9 @@ def create_app() -> Flask:
                     return jsonify({"ok": True, "answer": fallback_answer})
             return jsonify({"ok": True, "answer": fallback_answer})
 
+        if len(mentioned_cases) == 1:
+            return jsonify({"ok": True, "answer": _build_case_overview_answer(mentioned_cases[0])})
+
         if _is_project_list_request(message) and any(
             marker in message.lower() for marker in ["телега", "телеграм", "telegram", "тг"]
         ):
