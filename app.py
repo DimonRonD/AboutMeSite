@@ -520,6 +520,29 @@ def _build_multi_project_interest_answer(text: str) -> str:
     return "\n".join(lines)
 
 
+def _is_petlibot_features_request(text: str) -> bool:
+    normalized = (text or "").lower()
+    petlibot_markers = ["петлибот", "petlibot"]
+    feature_markers = ["функционал", "возможност", "умеет", "что делает", "расскажи о"]
+    return any(marker in normalized for marker in petlibot_markers) and any(
+        marker in normalized for marker in feature_markers
+    )
+
+
+def _build_petlibot_features_answer() -> str:
+    return (
+        "ПетлиБот на сайте умеет:\n"
+        "- Консультировать по проектам и кейсам сайта.\n"
+        "- Работать с контекстом через RAG-базу (данные из `rag_source`).\n"
+        "- Запоминать последние 10 вопросов пользователя по email.\n"
+        "- Напоминать, на каком вопросе остановились в прошлой беседе.\n"
+        "- Очищать память по кнопке или командой «очистить память».\n"
+        "- Ограничивать длину сообщения пользователя до 250 символов.\n"
+        "- Вести лог диалога с отображением на публичной странице логов (email маскируется).\n"
+        "- Показывать индикатор «Подготавливаю ответ...» во время генерации."
+    )
+
+
 def _mask_ip(value: str) -> str:
     if not value:
         return "unknown"
@@ -816,6 +839,9 @@ def create_app() -> Flask:
             instant_answer = _build_multi_project_interest_answer(message)
             if instant_answer:
                 return jsonify({"ok": True, "answer": instant_answer})
+
+        if _is_petlibot_features_request(message):
+            return jsonify({"ok": True, "answer": _build_petlibot_features_answer()})
 
         rag_context = []
         if rag_service:
