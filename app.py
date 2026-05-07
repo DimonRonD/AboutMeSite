@@ -587,15 +587,35 @@ def _case_markers(case: dict) -> list[str]:
     title = (case.get("title") or "").lower()
     markers = [title]
     if "nutribot" in title:
-        markers.extend(["nutribot", "нутрибот"])
+        markers.extend(
+            [
+                "nutribot",
+                "nutrib",
+                "нутрибот",
+                "нутриб",
+                "нутрибoт",
+                "нутрибot",
+            ]
+        )
     if "шмавито" in title:
-        markers.extend(["шмавито", "shmavito"])
+        markers.extend(["шмавито", "шмавит", "shmavito", "shmavit"])
     if "платформа для автоматизации" in title or "pusplexity" in _case_text(case):
-        markers.extend(["pusplexity", "пусплекс", "пусплекси", "пусплексити"])
+        markers.extend(
+            [
+                "pusplexity",
+                "pusplex",
+                "пусплекс",
+                "пусплекси",
+                "пусплексити",
+                "пусплекст",
+            ]
+        )
     if "корпоративного сайта" in title:
-        markers.extend(["aboutmesite", "корпоративный сайт", "about me site"])
+        markers.extend(
+            ["aboutmesite", "about me site", "aboutme", "корпоративный сайт", "сайт-витрина"]
+        )
     if "ai-ассистент" in title:
-        markers.extend(["петлибот", "petlibot", "ai-ассистент"])
+        markers.extend(["петлибот", "петлибота", "petlibot", "ai-ассистент", "ассистент"])
     return markers
 
 
