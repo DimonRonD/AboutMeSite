@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const rateButtonsBox = document.getElementById("aia-rate-buttons");
     const commentInput = document.getElementById("aia-comment-input");
     const sendCommentBtn = document.getElementById("aia-send-comment-btn");
+    const commentHint = document.getElementById("aia-comment-hint");
 
     if (!toggleBtn || !chatWidget) {
         return;
@@ -31,6 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let lastSupportMessageId = 0;
     let supportPollTimer = null;
     let supportConnectedShown = false;
+    let selectedRating = 0;
     const maxMessageLength = 250;
 
     const saveSession = () => {
@@ -120,6 +122,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!Number.isNaN(lastId) && lastId > lastSupportMessageId) {
                 lastSupportMessageId = lastId;
             }
+            if (Boolean(data.dialog_closed)) {
+                setClosedUiState(true);
+            }
         } catch (error) {
             // Keep silent on polling errors to avoid noisy UI.
         }
@@ -146,6 +151,26 @@ document.addEventListener("DOMContentLoaded", () => {
         isDialogClosed = Boolean(isClosed);
         chatControls.classList.toggle("d-none", isDialogClosed);
         feedbackBlock?.classList.toggle("d-none", !isDialogClosed);
+    };
+
+    const setCommentAvailability = (enabled) => {
+        if (commentInput) {
+            commentInput.disabled = !enabled;
+        }
+        if (sendCommentBtn) {
+            sendCommentBtn.disabled = !enabled;
+        }
+        if (commentHint) {
+            commentHint.classList.toggle("d-none", enabled);
+        }
+    };
+
+    const updateStarSelection = (rating) => {
+        const stars = rateButtonsBox?.querySelectorAll("[data-aia-rate]") || [];
+        stars.forEach((star) => {
+            const value = Number.parseInt(star.getAttribute("data-aia-rate") || "0", 10);
+            star.classList.toggle("is-active", value <= rating);
+        });
     };
 
     const syncDialogState = async () => {
@@ -203,11 +228,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isChatActivated) {
             return;
         }
-        isChatActivated = true;
-        chatAuth.classList.add("d-none");
-        chatBody.classList.remove("d-none");
-        setClosedUiState(false);
-
         toggleLoader(true);
         try {
             const response = await fetch("/api/aia/auth", {
@@ -222,12 +242,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
             if (!response.ok || !data.ok) {
                 showError(data.error || "Не удалось авторизоваться в AIA.");
-                isChatActivated = false;
-                chatAuth.classList.remove("d-none");
-                chatBody.classList.add("d-none");
-                chatControls.classList.add("d-none");
                 return;
             }
+
+            isChatActivated = true;
+            chatAuth.classList.add("d-none");
+            chatBody.classList.remove("d-none");
+            setClosedUiState(false);
 
             currentSessionId = data.session_id || currentSessionId;
             saveSession();
@@ -256,6 +277,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     await sendAiaText("очистить историю", false);
                     lastSupportMessageId = 0;
                     supportConnectedShown = false;
+                    selectedRating = 0;
+                    updateStarSelection(0);
+                    setCommentAvailability(false);
                 }
             } else {
                 appendMessage("assistant", "Здравствуйте! Я AIA. Чем могу помочь?");
@@ -264,10 +288,6 @@ document.addEventListener("DOMContentLoaded", () => {
             startSupportPolling();
         } catch (error) {
             showError("Не удалось подключиться к AIA.");
-            isChatActivated = false;
-            chatAuth.classList.remove("d-none");
-            chatBody.classList.add("d-none");
-            chatControls.classList.add("d-none");
         } finally {
             toggleLoader(false);
         }
@@ -347,7 +367,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 showError(data.error || "Не удалось сохранить оценку.");
                 return;
             }
-            appendMessage("assistant", data.message || "Оценка сохранена.");
+            selectedRating = rating;
+            updateStarSelection(selectedRating);
+            setCommentAvailability(true);
+            const rawRateMessage = (data.message || "Оценка сохранена.").trim();
+            const cleanedRateMessage = rawRateMessage.replace(
+                /\.\s*При желании добавьте комментарий:\s*\/comment\s*<текст>\.?/i,
+                "."
+            );
+            appendMessage("assistant", cleanedRateMessage);
         } catch (error) {
             showError("Не удалось отправить оценку.");
         }
@@ -356,7 +384,15 @@ document.addEventListener("DOMContentLoaded", () => {
     sendCommentBtn?.addEventListener("click", async () => {
         clearError();
         const comment = (commentInput?.value || "").trim();
-        if (!currentSessionId || !comment) {
+        if (!currentSessionId) {
+            showError("Сначала начните чат.");
+            return;
+        }
+        if (!selectedRating) {
+            showError("Сначала поставьте оценку звездами.");
+            return;
+        }
+        if (!comment) {
             showError("Введите комментарий.");
             return;
         }
@@ -388,6 +424,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     const savedSession = loadSession();
+    setCommentAvailability(false);
+    updateStarSelection(0);
     if (savedSession?.name && savedSession?.email) {
         currentName = (savedSession.name || "").trim();
         currentEmail = (savedSession.email || "").trim().toLowerCase();

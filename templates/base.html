@@ -138,21 +138,23 @@
     </div>
     <div id="aia-feedback" class="chat-controls d-none mt-2">
         <p class="mb-2"><strong>Диалог завершен. Оцените качество ответа:</strong></p>
-        <div id="aia-rate-buttons" class="d-flex gap-2 mb-2">
-            <button type="button" class="btn btn-outline-primary btn-sm" data-aia-rate="1">1</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" data-aia-rate="2">2</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" data-aia-rate="3">3</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" data-aia-rate="4">4</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" data-aia-rate="5">5</button>
+        <div id="aia-rate-buttons" class="aia-stars mb-2" aria-label="Оценка диалога">
+            <button type="button" class="aia-star-btn" data-aia-rate="1" aria-label="1 звезда">★</button>
+            <button type="button" class="aia-star-btn" data-aia-rate="2" aria-label="2 звезды">★</button>
+            <button type="button" class="aia-star-btn" data-aia-rate="3" aria-label="3 звезды">★</button>
+            <button type="button" class="aia-star-btn" data-aia-rate="4" aria-label="4 звезды">★</button>
+            <button type="button" class="aia-star-btn" data-aia-rate="5" aria-label="5 звёзд">★</button>
         </div>
+        <p id="aia-comment-hint" class="mb-2 text-muted">Комментарий станет доступен после оценки.</p>
         <textarea
             id="aia-comment-input"
             class="form-control mb-2"
             rows="2"
             maxlength="500"
             placeholder="Комментарий (необязательно)"
+            disabled
         ></textarea>
-        <button id="aia-send-comment-btn" type="button" class="btn btn-outline-secondary btn-sm">
+        <button id="aia-send-comment-btn" type="button" class="btn btn-outline-secondary btn-sm" disabled>
             Отправить комментарий
         </button>
     </div>

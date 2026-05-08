@@ -161,6 +161,27 @@ body {
     color: #78350f;
 }
 
+.aia-stars {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.aia-star-btn {
+    border: 0;
+    background: transparent;
+    color: #cbd5e1;
+    font-size: 1.4rem;
+    line-height: 1;
+    padding: 2px;
+    cursor: pointer;
+}
+
+.aia-star-btn:hover,
+.aia-star-btn.is-active {
+    color: #f59e0b;
+}
+
 .chat-error {
     color: #b91c1c;
     font-size: 0.9rem;

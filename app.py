@@ -1081,6 +1081,7 @@ def create_app() -> Flask:
                 "session_id": data.get("session_id", cleaned_session_id),
                 "after_id": data.get("after_id", after_id),
                 "last_id": data.get("last_id", after_id),
+                "dialog_closed": bool(data.get("dialog_closed", False)),
                 "messages": data.get("messages", []),
             }
         )
