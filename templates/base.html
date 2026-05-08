@@ -58,6 +58,9 @@
 <button id="chat-toggle-btn" class="chat-toggle-btn" type="button" aria-label="Открыть чат">
     ПетлиБот
 </button>
+<button id="aia-toggle-btn" class="chat-toggle-btn chat-toggle-btn-left" type="button" aria-label="Открыть AIA">
+    AIA
+</button>
 
 <section id="chat-widget" class="chat-widget d-none" aria-live="polite">
     <div class="chat-widget-header">
@@ -97,8 +100,67 @@
     </div>
 </section>
 
+<section id="aia-widget" class="chat-widget chat-widget-left d-none" aria-live="polite">
+    <div class="chat-widget-header">
+        <h2>AIA - внешний ассистент</h2>
+        <button id="aia-close-btn" type="button" class="chat-close-btn" aria-label="Закрыть чат">
+            x
+        </button>
+    </div>
+    <div id="aia-auth" class="chat-auth">
+        <p class="mb-2">Представьтесь и укажите email для начала диалога.</p>
+        <input id="aia-name-input" type="text" class="form-control mb-2" placeholder="Ваше имя">
+        <input id="aia-email-input" type="email" class="form-control mb-2" placeholder="Ваш email">
+        <button id="aia-start-btn" type="button" class="btn btn-primary btn-sm">Начать чат</button>
+    </div>
+    <div id="aia-body" class="chat-body d-none"></div>
+    <div id="aia-loader" class="chat-loader d-none">
+        <span class="chat-loader-dot"></span>
+        <span class="chat-loader-dot"></span>
+        <span class="chat-loader-dot"></span>
+        <span>Подготавливаю ответ...</span>
+    </div>
+    <div id="aia-error" class="chat-error d-none"></div>
+    <div id="aia-controls" class="chat-controls d-none">
+        <textarea
+            id="aia-message-input"
+            class="form-control mb-2"
+            rows="3"
+            maxlength="250"
+            placeholder="Введите вопрос (до 250 символов)"
+        ></textarea>
+        <div class="d-flex gap-2">
+            <button id="aia-send-btn" type="button" class="btn btn-success btn-sm">Отправить</button>
+            <button id="aia-clear-memory-btn" type="button" class="btn btn-outline-secondary btn-sm">
+                Очистить историю
+            </button>
+        </div>
+    </div>
+    <div id="aia-feedback" class="chat-controls d-none mt-2">
+        <p class="mb-2"><strong>Диалог завершен. Оцените качество ответа:</strong></p>
+        <div id="aia-rate-buttons" class="d-flex gap-2 mb-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" data-aia-rate="1">1</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-aia-rate="2">2</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-aia-rate="3">3</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-aia-rate="4">4</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-aia-rate="5">5</button>
+        </div>
+        <textarea
+            id="aia-comment-input"
+            class="form-control mb-2"
+            rows="2"
+            maxlength="500"
+            placeholder="Комментарий (необязательно)"
+        ></textarea>
+        <button id="aia-send-comment-btn" type="button" class="btn btn-outline-secondary btn-sm">
+            Отправить комментарий
+        </button>
+    </div>
+</section>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script src="{{ url_for('static', filename='js/chat-widget.js') }}"></script>
+<script src="{{ url_for('static', filename='js/aia-widget.js') }}"></script>
 </body>
 </html>

@@ -94,6 +94,18 @@ body {
     z-index: 1051;
 }
 
+.chat-toggle-btn-left {
+    left: 20px;
+    right: auto;
+    background: linear-gradient(90deg, #0f766e, #14b8a6);
+    box-shadow: 0 10px 24px rgba(15, 118, 110, 0.3);
+}
+
+.chat-widget-left {
+    left: 20px;
+    right: auto;
+}
+
 .chat-widget-header {
     display: flex;
     align-items: center;
@@ -203,5 +215,12 @@ body {
     .chat-toggle-btn {
         right: 12px;
         bottom: 12px;
+    }
+    .chat-widget-left {
+        left: 12px;
+        right: 12px;
+    }
+    .chat-toggle-btn-left {
+        left: 12px;
     }
 }

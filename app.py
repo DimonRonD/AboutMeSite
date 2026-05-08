@@ -1,8 +1,12 @@
 import logging
 import os
 import re
+import json
+import urllib.error
+import urllib.request
 from datetime import datetime, timedelta
 from logging.handlers import RotatingFileHandler
+from uuid import uuid4
 
 from flask import Flask, flash, g, jsonify, redirect, render_template, request, url_for
 from flask_limiter import Limiter
@@ -923,6 +927,137 @@ def create_app() -> Flask:
         ChatMemory.query.filter_by(email=email).delete()
         db.session.commit()
         return jsonify({"ok": True, "message": "Память чата очищена."})
+
+    def _call_aia_api(method: str, path: str, payload: dict | None = None):
+        base_url = (app.config.get("AIA_API_BASE_URL") or "").rstrip("/")
+        if not base_url:
+            return None, "Не задан AIA_API_BASE_URL в конфигурации.", 503
+
+        request_data = None
+        headers = {}
+        if payload is not None:
+            request_data = json.dumps(payload).encode("utf-8")
+            headers["Content-Type"] = "application/json"
+
+        request_url = f"{base_url}{path}"
+        req = urllib.request.Request(
+            request_url, data=request_data, headers=headers, method=method.upper()
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=45) as response:
+                body = response.read().decode("utf-8")
+                data = json.loads(body) if body else {}
+                return data, None, response.status
+        except urllib.error.HTTPError as error:
+            body = error.read().decode("utf-8", errors="ignore")
+            try:
+                error_data = json.loads(body)
+                detail = error_data.get("detail") or error_data.get("message") or body
+            except Exception:
+                detail = body or str(error)
+            return None, detail or "Ошибка внешнего ассистента.", error.code
+        except Exception as error:
+            return None, f"Не удалось подключиться к AIA API: {error}", 502
+
+    @app.route("/api/aia/auth", methods=["POST"])
+    @csrf.exempt
+    def aia_auth():
+        payload = request.get_json(silent=True) or {}
+        name = (payload.get("name") or "").strip()
+        email = _normalize_email(payload.get("email", ""))
+        if not name or not email:
+            return jsonify({"ok": False, "error": "Введите имя и email."}), 400
+
+        session_id = (payload.get("session_id") or "").strip() or f"web-{uuid4().hex[:16]}"
+        api_payload = {"session_id": session_id, "name": name, "email": email}
+        data, error, status_code = _call_aia_api("POST", "/auth", api_payload)
+        if error:
+            return jsonify({"ok": False, "error": error}), status_code
+
+        return jsonify(
+            {
+                "ok": True,
+                "session_id": session_id,
+                "message": data.get("message", ""),
+                "has_previous_history": bool(data.get("has_previous_history", False)),
+                "history": data.get("history", []),
+            }
+        )
+
+    @app.route("/api/aia/text", methods=["POST"])
+    @csrf.exempt
+    def aia_text():
+        payload = request.get_json(silent=True) or {}
+        session_id = (payload.get("session_id") or "").strip()
+        message = (payload.get("message") or "").strip()
+        if not session_id or not message:
+            return jsonify({"ok": False, "error": "Нужны session_id и message."}), 400
+        if len(message) > app.config["CHAT_MAX_MESSAGE_LENGTH"]:
+            return jsonify(
+                {
+                    "ok": False,
+                    "error": (
+                        f"Превышен размер сообщения. Допустимо не более "
+                        f"{app.config['CHAT_MAX_MESSAGE_LENGTH']} символов."
+                    ),
+                }
+            ), 400
+
+        data, error, status_code = _call_aia_api(
+            "POST", "/text", {"session_id": session_id, "query": message}
+        )
+        if error:
+            return jsonify({"ok": False, "error": error}), status_code
+
+        return jsonify(
+            {
+                "ok": True,
+                "answer": data.get("answer") or data.get("message", ""),
+                "from_cache": bool(data.get("from_cache", False)),
+            }
+        )
+
+    @app.route("/api/aia/rate", methods=["POST"])
+    @csrf.exempt
+    def aia_rate():
+        payload = request.get_json(silent=True) or {}
+        session_id = (payload.get("session_id") or "").strip()
+        rating = payload.get("rating")
+        if not session_id or rating is None:
+            return jsonify({"ok": False, "error": "Нужны session_id и rating."}), 400
+        data, error, status_code = _call_aia_api(
+            "POST", "/rate", {"session_id": session_id, "rating": rating}
+        )
+        if error:
+            return jsonify({"ok": False, "error": error}), status_code
+        return jsonify({"ok": True, "message": data.get("message", "Оценка сохранена.")})
+
+    @app.route("/api/aia/comment", methods=["POST"])
+    @csrf.exempt
+    def aia_comment():
+        payload = request.get_json(silent=True) or {}
+        session_id = (payload.get("session_id") or "").strip()
+        comment = (payload.get("comment") or "").strip()
+        if not session_id or not comment:
+            return jsonify({"ok": False, "error": "Нужны session_id и comment."}), 400
+        data, error, status_code = _call_aia_api(
+            "POST", "/comment", {"session_id": session_id, "comment": comment}
+        )
+        if error:
+            return jsonify({"ok": False, "error": error}), status_code
+        return jsonify({"ok": True, "message": data.get("message", "Комментарий сохранен.")})
+
+    @app.route("/api/aia/dialog/<session_id>")
+    @csrf.exempt
+    def aia_dialog(session_id: str):
+        cleaned_session_id = (session_id or "").strip()
+        if not cleaned_session_id:
+            return jsonify({"ok": False, "error": "Неверный session_id."}), 400
+        data, error, status_code = _call_aia_api("GET", f"/dialog/{cleaned_session_id}")
+        if error:
+            return jsonify({"ok": False, "error": error}), status_code
+        return jsonify({"ok": True, "dialog": data.get("dialog"), "messages": data.get("messages", [])})
 
     @app.route("/api/chat", methods=["POST"])
     @csrf.exempt

@@ -60,3 +60,4 @@ class Config:
     OPENAI_MAX_OUTPUT_TOKENS = int(os.environ.get("OPENAI_MAX_OUTPUT_TOKENS", "500"))
     OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", "0.1"))
     OPENAI_REASONING_EFFORT = os.environ.get("OPENAI_REASONING_EFFORT", "minimal")
+    AIA_API_BASE_URL = os.environ.get("AIA_API_BASE_URL", "").strip()
