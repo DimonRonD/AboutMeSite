@@ -985,6 +985,14 @@ def create_app() -> Flask:
             }
         )
 
+    @app.route("/api/aia/info")
+    @csrf.exempt
+    def aia_info():
+        data, error, status_code = _call_aia_api("GET", "/")
+        if error:
+            return jsonify({"ok": False, "error": error}), status_code
+        return jsonify({"ok": True, "data": data})
+
     @app.route("/api/aia/text", methods=["POST"])
     @csrf.exempt
     def aia_text():

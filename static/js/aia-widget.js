@@ -115,6 +115,9 @@ document.addEventListener("DOMContentLoaded", () => {
             );
             const data = await response.json();
             if (!response.ok || !data.ok) {
+                if (await handleAuthRequired(data.error || "")) {
+                    return;
+                }
                 return;
             }
             appendSupportMessages(data.messages || []);
@@ -173,6 +176,21 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
+    const isAuthRequiredError = (text) => {
+        const normalized = (text || "").toString().toLowerCase();
+        return normalized.includes("сначала выполните авторизацию") || normalized.includes("post /auth");
+    };
+
+    const handleAuthRequired = async (errorText) => {
+        if (!isAuthRequiredError(errorText)) {
+            return false;
+        }
+        isChatActivated = false;
+        appendMessage("system", "Сессия AIA обновляется. Выполняю повторную авторизацию...");
+        await activateChat();
+        return true;
+    };
+
     const syncDialogState = async () => {
         if (!currentSessionId) {
             setClosedUiState(false);
@@ -212,6 +230,12 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const data = await response.json();
             if (!response.ok || !data.ok) {
+                if (await handleAuthRequired(data.error || "")) {
+                    if (showInChat) {
+                        appendMessage("system", "Повторите отправку сообщения после переавторизации.");
+                    }
+                    return;
+                }
                 showError(data.error || "Ошибка при обработке запроса.");
                 return;
             }
@@ -364,6 +388,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const data = await response.json();
             if (!response.ok || !data.ok) {
+                if (await handleAuthRequired(data.error || "")) {
+                    return;
+                }
                 showError(data.error || "Не удалось сохранить оценку.");
                 return;
             }
@@ -407,6 +434,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const data = await response.json();
             if (!response.ok || !data.ok) {
+                if (await handleAuthRequired(data.error || "")) {
+                    return;
+                }
                 showError(data.error || "Не удалось отправить комментарий.");
                 return;
             }
