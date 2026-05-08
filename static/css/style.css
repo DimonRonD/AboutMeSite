@@ -149,6 +149,18 @@ body {
     background: #e2e8f0;
 }
 
+.chat-msg-support {
+    background: #dcfce7;
+    border-left: 3px solid #16a34a;
+}
+
+.chat-msg-system {
+    background: #fef3c7;
+    border-left: 3px solid #d97706;
+    font-size: 0.9rem;
+    color: #78350f;
+}
+
 .chat-error {
     color: #b91c1c;
     font-size: 0.9rem;

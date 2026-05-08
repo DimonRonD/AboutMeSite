@@ -28,6 +28,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentSessionId = "";
     let isChatActivated = false;
     let isDialogClosed = false;
+    let lastSupportMessageId = 0;
+    let supportPollTimer = null;
+    let supportConnectedShown = false;
     const maxMessageLength = 250;
 
     const saveSession = () => {
@@ -76,6 +79,69 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const openChat = () => chatWidget.classList.remove("d-none");
     const closeChat = () => chatWidget.classList.add("d-none");
+    const markSupportMessageSeen = (message) => {
+        const msgId = Number.parseInt(String(message?.id ?? ""), 10);
+        if (!Number.isNaN(msgId) && msgId > lastSupportMessageId) {
+            lastSupportMessageId = msgId;
+        }
+    };
+
+    const appendSupportMessages = (messages) => {
+        if (!Array.isArray(messages) || messages.length === 0) {
+            return;
+        }
+        messages.forEach((message) => {
+            if ((message?.actor || "").toLowerCase() !== "support") {
+                return;
+            }
+            if (!supportConnectedShown) {
+                appendMessage("system", "Оператор подключился");
+                supportConnectedShown = true;
+            }
+            markSupportMessageSeen(message);
+            appendMessage("support", message.content || "");
+        });
+    };
+
+    const pollSupportInbox = async () => {
+        if (!currentSessionId || !isChatActivated) {
+            return;
+        }
+        try {
+            const response = await fetch(
+                `/api/aia/support-inbox/${encodeURIComponent(currentSessionId)}?after_id=${lastSupportMessageId}`
+            );
+            const data = await response.json();
+            if (!response.ok || !data.ok) {
+                return;
+            }
+            appendSupportMessages(data.messages || []);
+            const lastId = Number.parseInt(String(data.last_id ?? ""), 10);
+            if (!Number.isNaN(lastId) && lastId > lastSupportMessageId) {
+                lastSupportMessageId = lastId;
+            }
+        } catch (error) {
+            // Keep silent on polling errors to avoid noisy UI.
+        }
+    };
+
+    const startSupportPolling = () => {
+        if (supportPollTimer) {
+            return;
+        }
+        supportPollTimer = window.setInterval(() => {
+            pollSupportInbox();
+        }, 5000);
+    };
+
+    const stopSupportPolling = () => {
+        if (!supportPollTimer) {
+            return;
+        }
+        window.clearInterval(supportPollTimer);
+        supportPollTimer = null;
+    };
+
     const setClosedUiState = (isClosed) => {
         isDialogClosed = Boolean(isClosed);
         chatControls.classList.toggle("d-none", isDialogClosed);
@@ -95,6 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const status = (data?.dialog?.status || "").toString().toLowerCase();
             setClosedUiState(status === "closed");
+            appendSupportMessages(data?.messages || []);
         } catch (error) {
             // Keep current UI state if snapshot request failed.
         }
@@ -172,16 +239,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
                 if (shouldContinue) {
                     history.forEach((item) => {
-                        const role = item.actor === "user" ? "user" : "assistant";
-                        appendMessage(role, item.content || "");
+                        const actor = (item.actor || "").toLowerCase();
+                        if (actor === "support") {
+                            if (!supportConnectedShown) {
+                                appendMessage("system", "Оператор подключился");
+                                supportConnectedShown = true;
+                            }
+                            appendMessage("support", item.content || "");
+                        } else {
+                            const role = actor === "user" ? "user" : "assistant";
+                            appendMessage(role, item.content || "");
+                        }
+                        markSupportMessageSeen(item);
                     });
                 } else {
                     await sendAiaText("очистить историю", false);
+                    lastSupportMessageId = 0;
+                    supportConnectedShown = false;
                 }
             } else {
                 appendMessage("assistant", "Здравствуйте! Я AIA. Чем могу помочь?");
             }
             await syncDialogState();
+            startSupportPolling();
         } catch (error) {
             showError("Не удалось подключиться к AIA.");
             isChatActivated = false;
@@ -302,7 +382,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     toggleBtn.addEventListener("click", openChat);
-    closeBtn.addEventListener("click", closeChat);
+    closeBtn.addEventListener("click", () => {
+        closeChat();
+        stopSupportPolling();
+    });
 
     const savedSession = loadSession();
     if (savedSession?.name && savedSession?.email) {

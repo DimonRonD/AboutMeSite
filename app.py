@@ -1059,6 +1059,32 @@ def create_app() -> Flask:
             return jsonify({"ok": False, "error": error}), status_code
         return jsonify({"ok": True, "dialog": data.get("dialog"), "messages": data.get("messages", [])})
 
+    @app.route("/api/aia/support-inbox/<session_id>")
+    @csrf.exempt
+    def aia_support_inbox(session_id: str):
+        cleaned_session_id = (session_id or "").strip()
+        if not cleaned_session_id:
+            return jsonify({"ok": False, "error": "Неверный session_id."}), 400
+        after_id_raw = (request.args.get("after_id") or "0").strip()
+        try:
+            after_id = max(int(after_id_raw), 0)
+        except ValueError:
+            return jsonify({"ok": False, "error": "after_id должен быть целым числом."}), 400
+
+        path = f"/support/inbox/{cleaned_session_id}?after_id={after_id}"
+        data, error, status_code = _call_aia_api("GET", path)
+        if error:
+            return jsonify({"ok": False, "error": error}), status_code
+        return jsonify(
+            {
+                "ok": True,
+                "session_id": data.get("session_id", cleaned_session_id),
+                "after_id": data.get("after_id", after_id),
+                "last_id": data.get("last_id", after_id),
+                "messages": data.get("messages", []),
+            }
+        )
+
     @app.route("/api/chat", methods=["POST"])
     @csrf.exempt
     def chat():
